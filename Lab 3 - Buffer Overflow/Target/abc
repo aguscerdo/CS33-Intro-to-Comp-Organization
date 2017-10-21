@@ -1,0 +1,2 @@
+pushq 0x7a83d71c
+mov 0x7a83d71c, %edi

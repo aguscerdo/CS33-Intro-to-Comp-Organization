@@ -1,0 +1,68 @@
+static void up (int dim, int start, int end, pixel *dst, pixel *src)
+{ 
+    for (unsigned int i = end; i != start; i—)
+        {
+          dst[i].red = (src[i].red+src[i-1].red+src[i+1].red+src[dim+i].red+src[dim+i-1].red+src[dim+i+1].red)/6;
+          dst[i].blue = (src[i].blue +src[i-1].blue+src[i+1].blue+src[dim+i].blue+src[dim+i-1].blue+src[dim+i+1].blue)/6;
+          dst[i].green = (src[i]. green +src[i-1]. green +src[i+1]. green +src[dim+i]. green +src[dim+i-1]. green +src[dim+i+1]. green)/6;
+
+          /*dst[i-1].red = (src[i-1].red+src[i-2].red+src[i].red+src[dim+i].red+src[dim+i-2].red+src[dim+i-1].red)/6;
+          dst[i-1].blue = (src[i-1].blue +src[i-2].blue+src[i].blue+src[dim+i].blue+src[dim+i-2].blue+src[dim+i-1].blue)/6;
+          dst[i-1].green = (src[i-1]. green +src[i-2]. green +src[i]. green +src[dim+i]. green +src[dim+i-2]. green +src[dim+i-1]. green)/6;
+	*/
+        }
+}
+static void down (int dim, int start, int end, pixel *dst, pixel *src)
+{
+        for (unsigned int i = end; i != start; i—)
+           {
+             dst[i].red = (src[i].red+src[i-1].red+src[i+1].red+src[i-dim].red+src[i-dim-1].red+src[dim+i+1].red)/6;
+             dst[i].blue = (src[i].blue +src[i-1].blue+src[i+1].blue+src[i-dim].blue+src[i-dim-1].blue+src[i-dim+1].blue)/6;
+             dst[i].green = (src[i]. green +src[i-1]. green +src[i+1]. green +src[i-dim]. green +src[i-dim-1]. green +src[i-dim+1]. green)/6;
+	/*
+             dst[i-1].red = (src[i-1].red+src[i-2].red+src[i].red+src[i-dim].red+src[i-dim-2].red+src[i-dim-1].red)/6;
+             dst[i-1].blue = (src[i-1].blue +src[i-2].blue+src[i].blue+src[i-dim].blue+src[i-dim-2].blue+src[i-dim-1].blue)/6;
+             dst[i-1].green = (src[i-1]. green +src[i-2]. green +src[i]. green +src[i-dim]. green +src[i-dim-2]. green +src[i-dim-1]. green)/6;
+	*/
+           }
+}
+
+
+static void left (int dim, int rowstart, int rowend, pixel *dst, pixel *src)
+{
+unsigned int i = rowstart*dim;
+unsigned int end = rowend*dim;
+
+for (; i != end; i =- step)
+{
+        dst[i].red = (src[i].red+src[i+1].red+src[i-dim].red+src[i-dim+1].red+src[i+dim].red+src[i+dim+1].red)/6;
+        dst[i].blue = (src[i].blue +src[i+1].blue +src[i-dim].blue+src[i-dim+1].blue+src[i+dim].blue+src[i+dim+1].blue)/6;
+        dst[i].green = (src[i].green+src[i+1].green+src[i-dim].green+src[i-dim+1].green+src[i+dim].green+src[i+dim+1].green)/6;
+}
+}
+
+static void right (int dim, int rowstart, int rowend, pixel *dst, pixel *src)
+{
+unsigned int i = rowend*(dim+1)-1;
+unsigned int start = rowend*(1+dim)-1;
+
+for (; i != start; i =- dim)
+{
+        dst[i].red = (src[i].red+src[i-1].red+src[i-dim].red+src[i-dim-1].red+src[i+dim].red+src[i+dim-1].red)/6;
+        dst[i].blue = (src[i].blue +src[i-1].blue +src[i-dim].blue+src[i-dim-1].blue+src[i+dim].blue+src[i+dim-1].blue)/6;
+        dst[i].green = (src[i].green+src[i-1].green+src[i-dim].green+src[i-dim-1].green+src[i+dim].green+src[i+dim-1].green)/6;
+}
+}
+
+static void center (int p, int dim, pixel *src, pixel *dst)
+{
+	unsigned int p1 = p-dim;
+	unsigned int p2 = p+dim;
+
+	dst[p].red = (src[p1-1].red+src[p1].red+src[p1+1].red+src[p-1].red+src[p].red+src[p+1].red+src[p2-1]+src[p2].red+src[p2+1].red)/9;
+	dst[p].blue = (src[p1-1].blue+src[p1].blue+src[p1+1].blue+src[p-1].blue+src[p].blue+src[p+1].blue+src[p2-1]+src[p2].blue+src[p2+1].blue)/9;
+	dst[p].green = (src[p1-1].green+src[p1].green+src[p1+1].green+src[p-1].green+src[p].green+src[p+1].green+src[p2-1]+src[p2].green+src[p2+1].green)/9;
+
+
+}
+	

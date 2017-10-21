@@ -1,0 +1,355 @@
+/********************************************************
+ * Kernels to be optimized for the CS:APP Performance Lab
+ ********************************************************/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "defs.h"
+#include <pthread.h>
+#include <semaphore.h>
+const int MAXTHREADS = 16;
+/* 
+ * Please fill in the following team struct 
+ */
+team_t team = {
+    "004636016",            /* UID */
+
+    "Agustin Marinovic Sfeir",          /* Full name */
+    "amarinovic@ucla.edu",  /* Email */
+
+    "",                   /* Leave Blank */
+    ""                    /* Leave Blank */
+};
+
+//  You should modify only this file -- feel free to modify however you like!
+
+/*
+ * setup - This function runs one time, and will not be timed.
+ *         You can do whatever initialization you need here, but
+ *         it is not required -- don't use if you don't want to.
+ */
+void setup() {
+  
+}
+
+/***************
+ * SMOOTH KERNEL
+ **************/
+
+/***************************************************************
+ * Various typedefs and helper functions for the smooth function
+ * You may modify these any way you like.
+ **************************************************************/
+
+/* A struct used to compute averaged pixel value */
+typedef struct {
+    int red;
+    int green;
+    int blue;
+    int num;
+} pixel_sum;
+
+/* Compute min and max of two integers, respectively */
+static int min(int a, int b) { return (a < b ? a : b); }
+static int max(int a, int b) { return (a > b ? a : b); }
+
+/* 
+ * initialize_pixel_sum - Initializes all fields of sum to 0 
+ */
+static void initialize_pixel_sum(pixel_sum *sum) 
+{
+    sum->red = sum->green = sum->blue = 0;
+    sum->num = 0;
+    return;
+}
+
+/* 
+ * accumulate_sum - Accumulates field values of p in corresponding 
+ * fields of sum 
+ */
+static void accumulate_sum(pixel_sum *sum, pixel p) 
+{
+    sum->red += (int) p.red;
+    sum->green += (int) p.green;
+    sum->blue += (int) p.blue;
+    sum->num++;
+    return;
+}
+
+/* 
+ * assign_sum_to_pixel - Computes averaged pixel value in current_pixel 
+ */
+static void assign_sum_to_pixel(pixel *current_pixel, pixel_sum sum) 
+{
+    current_pixel->red = (unsigned short) (sum.red/sum.num);
+    current_pixel->green = (unsigned short) (sum.green/sum.num);
+    current_pixel->blue = (unsigned short) (sum.blue/sum.num);
+    return;
+}
+
+/* 
+ * avg - Returns averaged pixel value at (i,j) 
+ */
+static pixel avg(int dim, int i, int j, pixel *src) 
+{
+    int ii, jj;
+    pixel_sum sum;
+    pixel current_pixel;
+
+    initialize_pixel_sum(&sum);
+    for(ii = max(i-1, 0); ii <= min(i+1, dim-1); ii++) 
+	for(jj = max(j-1, 0); jj <= min(j+1, dim-1); jj++) 
+	    accumulate_sum(&sum, src[RIDX(ii, jj, dim)]);
+
+    assign_sum_to_pixel(&current_pixel, sum);
+    return current_pixel;
+}
+
+
+
+
+/******************************************************
+ * Your different versions of the smooth kernel go here
+ ******************************************************/
+
+/*
+ * naive_smooth - The naive baseline version of smooth 
+ */
+char naive_smooth_descr[] = "naive_smooth: Naive baseline implementation";
+void naive_smooth(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+
+    for (j = 0; j < dim; j++) {
+       for (i = 0; i < dim; i++) {	
+           dst[RIDX(i, j, dim)] = avg(dim, i, j, src);
+       }
+    }
+}
+
+/*
+ * smooth - Your current working version of smooth. 
+ * IMPORTANT: This is the version you will be graded on
+ */
+void alpha1 (int dim, pixel *src, pixel *dst);
+
+
+char smooth_descr[] = "smooth: Current working version";
+void smooth(int dim, pixel *src, pixel *dst) 
+{
+    alpha1(dim, src, dst);
+}
+
+
+
+/*
+ *  Alpha1 
+ *
+ */
+
+typedef struct
+{
+	int dim;
+	int start;
+	int end; 
+	pixel *src;
+	pixel *dst;
+} param;
+
+static void smoothAll (int dim, int start, int end, pixel *src, pixel *dst)
+{
+	unsigned int p, p1, p2, i, j, il, ir, id, ids;
+	ids = dim*(dim-1);
+
+	for(i = start; i != end+1; i++)
+	{
+				
+		//Left
+		il += dim;
+	        dst[il].red = (src[il].red+src[il+1].red+src[il-dim].red+src[il-dim+1].red+src[il+dim].red+src[il+dim+1].red)/6;
+	        dst[il].blue = (src[il].blue +src[il+1].blue +src[il-dim].blue+src[il-dim+1].blue+src[il+dim].blue+src[il+dim+1].blue)/6;
+	        dst[il].green = (src[il].green+src[il+1].green+src[il-dim].green+src[il-dim+1].green+src[il+dim].green+src[il+dim+1].green)/6;
+		
+
+		//Right
+		ir = (i+1)*dim - 1;
+	        dst[ir].red = (src[ir].red+src[ir-1].red+src[ir-dim].red+src[ir-dim-1].red+src[ir+dim].red+src[ir+dim-1].red)/6;
+	        dst[ir].blue = (src[ir].blue +src[ir-1].blue +src[ir-dim].blue+src[ir-dim-1].blue+src[ir+dim].blue+src[ir+dim-1].blue)/6;
+	        dst[ir].green = (src[ir].green+src[ir-1].green+src[ir-dim].green+src[ir-dim-1].green+src[ir+dim].green+src[ir+dim-1].green)/6;
+		
+		//Down
+		id = ids + i;
+		dst[id].red = (src[id].red+src[id-1].red+src[id+1].red+src[id-dim].red+src[id-dim-1].red+src[id-dim+1].red)/6;
+		dst[id].blue = (src[id].blue +src[id-1].blue+src[id+1].blue+src[id-dim].blue+src[id-dim-1].blue+src[id-dim+1].blue)/6;
+		dst[id].green = (src[id].green +src[id-1].green +src[id+1].green +src[id-dim].green +src[id-dim-1].green +src[id-dim+1].green)/6;
+		
+
+		//UP
+		dst[i].red = (src[i].red+src[i-1].red+src[i+1].red+src[dim+i].red+src[dim+i-1].red+src[dim+i+1].red)/6;
+		dst[i].blue = (src[i].blue +src[i-1].blue+src[i+1].blue+src[dim+i].blue+src[dim+i-1].blue+src[dim+i+1].blue)/6;
+		dst[i].green = (src[i].green +src[i-1].green +src[i+1].green +src[dim+i].green +src[dim+i-1].green +src[dim+i+1].green)/6;
+		
+		for(j = 1; j != dim-1;j++) //Center
+		{
+			p = i*dim +j;
+			p1 = p-dim;
+			p2 = p+dim;
+			dst[p].red = (src[p1-1].red + src[p1].red + src[p1+1].red + src[p-1].red + src[p].red + src[p+1].red + src[p2-1].red + src[p2].red + src[p2+1].red)/9;
+			dst[p].blue = (src[p1-1].blue+src[p1].blue+src[p1+1].blue+src[p-1].blue+src[p].blue+src[p+1].blue+src[p2-1].blue+src[p2].blue+src[p2+1].blue)/9;
+			dst[p].green = (src[p1-1].green+src[p1].green+src[p1+1].green+src[p-1].green+src[p].green+src[p+1].green+src[p2-1].green+src[p2].green+src[p2+1].green)/9;
+		}
+	}
+}
+
+
+void omicorn(param a)//int dim, int start, int end, pixel *src, pixel *dst)
+{
+	smoothAll (a.dim, a.start, a.end, a.src, a.dst);
+}
+
+void *threaded (void * args)
+{
+	param* q = (param*)args;
+	param queso = *q;
+	omicorn(queso);
+	return NULL;
+}
+
+void alpha1 (int dim, pixel *src, pixel *dst)
+{
+unsigned short N = min(MAXTHREADS-1, dim>>2);
+int sq1 = dim*(dim-1);
+int sq2 = dim*dim-1;
+unsigned int i, bplace = 0;
+param b;
+pthread_t silk[MAXTHREADS+1];
+unsigned int workload = (dim-2)/N;
+
+b.dim = dim;
+b.src = src;
+b.dst = dst;
+
+//Corners First
+//Top Left
+dst[0].red = (src[0].red+src[1].red+src[dim].red+src[dim+1].red)>>2;
+dst[0].blue = (src[0].blue+src[1].blue+src[dim].blue+src[dim+1].blue)>>2;
+dst[0].green = (src[0].green+src[1].green+src[dim].green+src[dim+1].green)>>2;
+
+//Top Right
+dst[dim-1].red = (src[dim-1].red+src[dim-2].red+src[2*dim-1].red+src[2*dim-2].red)>>2;
+dst[dim-1].blue = (src[dim-1].blue+src[dim-2].blue+src[2*dim-1].blue+src[2*dim-2].blue)>>2;
+dst[dim-1].green = (src[dim-1].green+src[dim-2].green+src[2*dim-1].green+src[2*dim-2].green)>>2;
+
+//Bottom Right
+dst[sq2].red = (src[sq2].red+src[sq2-1].red+src[sq1-1].red+src[sq1-2].red)>>2;
+dst[sq2].blue = (src[sq2].blue+src[sq2-1].blue+src[sq1-1].blue+src[sq1-2].blue)>>2;
+dst[sq2].green = (src[sq2].green+src[sq2-1].green+src[sq1-1].green+src[sq1-2].green)>>2;
+
+//Bottom Left
+dst[sq1].red = (src[sq1].red+src[sq1+1].red+src[sq1-dim].red+src[sq1-dim+1].red)>>2;
+dst[sq1].blue = (src[sq1].blue+src[sq1+1].blue+src[sq1-dim].blue+src[sq1-dim+1].blue)>>2;
+dst[sq1].green = (src[sq1].green+src[sq1+1].green+src[sq1-dim].green+src[sq1-dim+1].green)>>2;
+
+
+/*
+for (i = 0; i != N-1; i++)
+{
+  b.start = bplace + 1;
+  bplace = bplace + workload;
+  b.end = bplace;
+  if (pthread_create(&silk[i], NULL, threaded, &b) != 0)
+	exit(9);  	
+}
+b.start = bplace+1;
+b.end = dim - 2;
+if (b.end > b.start)
+{
+	pthread_create(&silk[i], NULL, threaded, &b);
+}
+*/
+/*
+b.start = 1;
+b.end = dim-2;
+pthread_create(&silk[0], NULL, threaded, (void *)&b);
+*/
+smoothAll (dim, 1, dim-2, src, dst);
+
+}
+
+char alpha1Descr[] = "A1 ";
+
+//——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————//
+
+/********************************************************************* 
+ * register_smooth_functions - Register all of your different versions
+ *     of the smooth kernel with the driver by calling the
+ *     add_smooth_function() for each test function.  When you run the
+ *     driver program, it will test and report the performance of each
+ *     registered test function.  
+ *********************************************************************/
+
+void register_smooth_functions() {
+ //   add_smooth_function(&smooth, smooth_descr);
+   add_smooth_function(&naive_smooth, naive_smooth_descr);
+     add_smooth_function(&alpha1, alpha1Descr);
+ add_smooth_function(&alpha2, alpha2Descr);
+    /* ... Register additional test functions here */
+}
+
+
+
+
+
+
+// IGNORE EVERYTHING AFTER THIS POINT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!111
+// You are not implementing rotate
+
+
+/***************
+ * ROTATE KERNEL
+ ***************/
+
+/******************************************************
+ * Your different versions of the rotate kernel go here
+ ******************************************************/
+
+/* 
+ * naive_rotate - The naive baseline version of rotate 
+ */
+char naive_rotate_descr[] = "naive_rotate: Naive baseline implementation";
+void naive_rotate(int dim, pixel *src, pixel *dst) 
+{
+    int i, j;
+
+    for (i = 0; i < dim; i++)
+	for (j = 0; j < dim; j++)
+	    dst[RIDX(dim-1-j, i, dim)] = src[RIDX(i, j, dim)];
+}
+
+/* 
+ * rotate - Your current working version of rotate
+ * IMPORTANT: This is the version you will be graded on
+ */
+char rotate_descr[] = "rotate: Current working version";
+void rotate(int dim, pixel *src, pixel *dst) 
+{
+    naive_rotate(dim, src, dst);
+}
+
+/*********************************************************************
+ * register_rotate_functions - Register all of your different versions
+ *     of the rotate kernel with the driver by calling the
+ *     add_rotate_function() for each test function. When you run the
+ *     driver program, it will test and report the performance of each
+ *     registered test function.  
+ *********************************************************************/
+
+void register_rotate_functions() 
+{
+    add_rotate_function(&naive_rotate, naive_rotate_descr);   
+    add_rotate_function(&rotate, rotate_descr);   
+    /* ... Register additional test functions here */
+}
+
+
+
